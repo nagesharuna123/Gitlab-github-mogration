@@ -1,0 +1,76 @@
+To migrate multiple branches at once using `gh actions-importer`, you need to specify the branches you want to migrate. By default, many migration tools focus on the main branch unless additional configurations or options are specified.
+
+While the `gh actions-importer` tool documentation might not explicitly cover migrating multiple branches in a single command, you can follow a general approach to ensure all relevant branches are considered.
+
+Here’s a step-by-step process:
+
+1. **List All Branches**: Identify the branches in your GitLab project that need to be migrated.
+
+2. **Iterate Through Branches**: Use a script or a series of commands to iterate through each branch and perform the migration.
+
+3. **Merge Workflows**: Ensure that the workflows are correctly merged or placed in the correct branches in the GitHub repository.
+
+### Script to Migrate Multiple Branches
+
+Below is an example of a Bash script that automates the migration for multiple branches:
+
+```bash
+#!/bin/bash
+
+# Define variables
+GITLAB_URL="https://gitlab.com/your-group/your-project.git"
+GITHUB_URL="https://github.com/lithesheeli/second-migration.git"
+OUTPUT_DIR="tmp/migrate"
+NAMESPACE="gitlab github migration"
+PROJECT="second-project"
+BRANCHES=("main" "dev" "feature-branch-1" "feature-branch-2") # Add all branches you want to migrate
+
+# Clone the GitLab repository
+git clone $GITLAB_URL temp-repo
+cd temp-repo
+
+# Iterate over each branch
+for BRANCH in "${BRANCHES[@]}"; do
+  # Checkout the branch
+  git checkout $BRANCH
+
+  # Run the migration command
+  gh actions-importer migrate gitlab \
+    --target-url $GITHUB_URL \
+    --output-dir $OUTPUT_DIR/$BRANCH \
+    --namespace $NAMESPACE \
+    --project $PROJECT
+
+  # Copy the generated workflows to the GitHub repository
+  mkdir -p ../github-repo/.github/workflows/$BRANCH
+  cp -r $OUTPUT_DIR/$BRANCH/.github/workflows/* ../github-repo/.github/workflows/$BRANCH/
+
+  # Push the workflows to the GitHub repository
+  cd ../github-repo
+  git checkout $BRANCH || git checkout -b $BRANCH
+  git add .github/workflows/$BRANCH
+  git commit -m "Add GitHub Actions workflows for branch $BRANCH"
+  git push origin $BRANCH
+  cd ../temp-repo
+done
+
+# Clean up
+cd ..
+rm -rf temp-repo github-repo $OUTPUT_DIR
+```
+
+### Explanation of the Script
+
+1. **Define Variables**: Set the necessary variables like the GitLab and GitHub URLs, the output directory, namespace, project name, and branches to migrate.
+
+2. **Clone the GitLab Repository**: Clone the GitLab repository to a temporary directory.
+
+3. **Iterate Over Branches**: For each branch:
+   - Checkout the branch.
+   - Run the `gh actions-importer migrate gitlab` command for that branch.
+   - Copy the generated workflows to a local copy of the GitHub repository.
+   - Push the workflows to the corresponding branch in the GitHub repository.
+
+4. **Clean Up**: Remove temporary directories created during the process.
+
+This script ensures that each branch's CI/CD configuration is migrated and pushed to the corresponding branch in the GitHub repository. Adjust the variables and branch list according to your specific project needs.
