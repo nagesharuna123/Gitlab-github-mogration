@@ -1,0 +1,80 @@
+name: my-first-group1875709/migration-testing/test-1
+
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: "${{ github.ref }}"
+  cancel-in-progress: true
+
+jobs:
+  build-laptop:
+    runs-on: ubuntu-latest
+
+    container:
+      image: alpine
+
+    timeout-minutes: 60
+
+    env:
+      BUILD_FILE_NAME: laptop.txt
+
+    steps:
+    - name: Install Git
+      run: apk add --no-cache git
+
+    - name: Checkout repository
+      uses: actions/checkout@v4.1.0
+      with:
+        fetch-depth: 20
+
+    - run: echo "I am making Laptop 22"
+
+    - run: mkdir build
+
+    - run: echo "Mainboard" >> build/$BUILD_FILE_NAME
+
+    - run: cat build/$BUILD_FILE_NAME
+
+    - run: echo "Keyboard" >> build/$BUILD_FILE_NAME
+
+    - run: cat build/$BUILD_FILE_NAME
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4.1.0
+      if: success()
+      with:
+        name: "${{ github.job }}"
+        path: build
+
+  test-laptop:
+    needs: build-laptop
+
+    runs-on: ubuntu-latest
+
+    container:
+      image: alpine
+
+    timeout-minutes: 60
+
+    env:
+      BUILD_FILE_NAME: laptop.txt
+
+    steps:
+    - name: Install Git
+      run: apk add --no-cache git
+
+    - name: Checkout repository
+      uses: actions/checkout@v4.1.0
+      with:
+        fetch-depth: 20
+
+    - name: Download artifact
+      uses: actions/download-artifact@v4.1.0
+
+    - run: test -f build/$BUILD_FILE_NAME
+
+    - run: grep "Mainboard" build/$BUILD_FILE_NAME
+
+    - run: grep "Keyboard" build/$BUILD_FILE_NAME
