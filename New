@@ -45,7 +45,7 @@ jobs:
       uses: actions/upload-artifact@v4.1.0
       if: success()
       with:
-        name: "${{ github.job }}"
+        name: build-artifact
         path: build
 
   test-laptop:
@@ -72,6 +72,9 @@ jobs:
 
     - name: Download artifact
       uses: actions/download-artifact@v4.1.0
+      with:
+        name: build-artifact
+        path: build
 
     - run: test -f build/$BUILD_FILE_NAME
 
